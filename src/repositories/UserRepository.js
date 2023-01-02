@@ -55,6 +55,18 @@ exports.update = async (id, data) => {
 
 }
 
+exports.findByEmail = async (email) => {
+    const user = await User.findOne({
+        email
+    });
+
+    if (!user) {
+        throw new Error("Usuário não encontrado");
+    } else {
+        return user
+    }
+}
+
 exports.updateActive = async (id, active) => {
     return await User.findByIdAndUpdate({ _id: ObjectId(id) }, { active });
 }
@@ -65,4 +77,16 @@ exports.updateFirstAccess = async (id) => {
 
 exports.delete = async (id) => {
     return await User.findOneAndDelete({ _id: ObjectId(id) });
+}
+
+exports.updateTempPassword = async (id, password) => {
+    return await User.findByIdAndUpdate({ _id: ObjectId(id) }, { temp_password: password });
+}
+
+exports.updateForgotPassword = async (id, value) => {
+    return await User.findOneAndUpdate({ _id: ObjectId(id) }, { forgot_password: value });
+}
+
+exports.updateTempPasswordExpiration = async (id, date) => {
+    return await User.findByIdAndUpdate({ _id: ObjectId(id) }, { temp_password_expiration: date });
 }

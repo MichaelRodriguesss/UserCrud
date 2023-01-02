@@ -3,6 +3,9 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const UserRepository = require('../repositories/UserRepository');
 const ValidationContract = require('../services/validatorService');
+const mailService = require('../services/mailService');
+const passwordService = require('../services/passwordService');
+const crypto = require('crypto');
 
 module.exports = {
 
@@ -26,8 +29,7 @@ module.exports = {
     }
 
     // create password
-    const salt = await bcrypt.genSalt(12);
-    const passwordHash = await bcrypt.hash(password.toString(), salt);
+    const passwordHash = await bcrypt.hash(password.toString(), 12);
 
     // create user
     const user = new User({
@@ -48,12 +50,6 @@ module.exports = {
   async login(req, res) {
     const { email, password } = req.body;
 
-    // check if user exists
-    const user = await User.findOne({ email: email });
-    if (!user) {
-      return res.status(404).json({ message: "Usuário não encontrado!" });
-    }
-
     let contract = new ValidationContract();
     contract.isRequired(email, 'O campo nome não pode ser vazio');
     contract.isEmail(email, 'E-mail inválido');
@@ -63,14 +59,47 @@ module.exports = {
         return;
     }
 
-    await UserRepository.updateFirstAccess(user.id);
-
-    // check if the password match
-    const checkPassword = await bcrypt.compare(password.toString(), user.password.toString());
-
-    if (!checkPassword) {
-      return res.status(422).json({ message: "senha incorreta!" });
+    // check if user exists
+    const user = await User.findOne({ email: email });
+    if (!user) {
+      return res.status(404).json({ message: "Usuário não encontrado!" });
     }
+
+    if(user.forgot_password == true) {
+
+      const checkPassword = await bcrypt.compare(password.toString(), user.temp_password);
+      console.log(!checkPassword);
+
+      if (!checkPassword) {
+        return res.status(422).json({ message: "senha incorreta!" });
+      }
+      
+      if (user.active == false) throw new Error("Esse usuário foi desativado");
+
+      // Caso a senha que o usuário mande for a senha temporária, o sistema verifica se a senha já foi expirada. Se  a senha passado não for a temporária, libera o acesso normal para a plataforma.
+      if(user) {
+          await passwordService.checkIfPasswordHasExpired(user.id, user.temp_password_expiration)
+      } else {
+          const checkPassword = await bcrypt.compare(password.toString() , user.password.toString());
+
+          if (!checkPassword) {
+          return res.status(422).json({ message: "senha incorreta!" });
+         }
+
+          await UserRepository.updateForgotPassword(user.id, false);
+          await UserRepository.updateFirstAccess(user.id);
+
+          user = await UserRepository.findByEmail(email);
+      }
+    } else {
+      const checkPassword = await bcrypt.compare(password.toString() , user.password.toString());
+
+      if (!checkPassword) {
+      return res.status(422).json({ message: "senha incorreta!" });
+     }
+    }
+
+    await UserRepository.updateFirstAccess(user.id);
 
     try {
       const secret = process.env.SECRET;
@@ -101,12 +130,13 @@ module.exports = {
     const id = req.params.id;
   
     //check if user exists
-    const user = await UserRepository.findById(id, "-password");
-    if (!user) {
-      res.status(404).json({ message: "Usuário não encontrado!" });
+
+    try {
+      const user = await UserRepository.findById(id, "-password");
+      res.status(200).json({ user });
+    } catch(e) {
+      return res.status(400).json({message: e.message});
     }
-  
-    res.status(200).json({ user });
   },
 
   async updateUser(req, res) {
@@ -165,5 +195,43 @@ module.exports = {
     } catch (e) {
         res.status(400).json({ message: e.message });
     }
-  }
+  },
+
+  async forgotPassword(req, res) {
+    let { email } = req.body;
+
+    let randomPassword = crypto.randomBytes(6).toString("HEX");
+    let hashPassword = await bcrypt.hash(randomPassword, 12);
+
+    let contract = new ValidationContract();
+    contract.isRequired(req.body.email, 'O campo email não pode ser vazio');
+
+    if (!contract.isValid()) {
+        res.status(400).send(contract.errors()).end();
+        return;
+    }
+
+    try {
+        let user = await UserRepository.findByEmail(email);
+
+        await UserRepository.updateForgotPassword(user.id, true);
+        await UserRepository.updateTempPassword(user.id, hashPassword);
+
+        await mailService.sendEmail({
+            email: user.email,
+            subject: "Recuperação de senha",
+            payload: {
+                username: user.username,
+                password: randomPassword
+            },
+            template: "../template/newPassword.handlebars"
+        });
+
+        await passwordService.generateTempPasswordExpirationDate(user.id);
+
+        res.status(200).json({ message: "E-mail enviado" });
+    } catch (e) {
+        res.status(400).json({ message: e.message });
+    }
+  },
 };

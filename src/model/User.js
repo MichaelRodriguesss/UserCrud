@@ -18,7 +18,20 @@ const DataSchema = new mongoose.Schema({
     type: Boolean,
     required: true,
     default: true
-  }
+  },
+  temp_password: {
+    type: String,
+    required: false
+  },
+  temp_password_expiration: {
+    type: String,
+    required: false
+  },
+  forgot_password: {
+    type: Boolean,
+    required: true,
+    default: false
+  },
 });
 
 const Users = mongoose.model('User', DataSchema);

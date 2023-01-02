@@ -8,11 +8,14 @@ routes.get('/', (req, res) => {
     res.status(200).json({ message: "Bem-vindo" });
 });
 
-routes.post('/auth/register',checkAdmin ,UserController.register);
+routes.patch('/user/forgotPassword', UserController.forgotPassword)
+routes.post('/auth/register' ,UserController.register);
 routes.post("/auth/login", UserController.login);
 routes.get("/users", checkOperator, UserController.listAllUsers);
 routes.get('/user/:id', checkOperator, UserController.infoDetailUser);
 routes.put('/user/:id', checkAdmin, UserController.updateUser);
 routes.delete('/user/:id', checkAdmin, UserController.deleteUser);
+
+// esqueceu a senha
 
 module.exports = routes;
