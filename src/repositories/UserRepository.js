@@ -83,6 +83,10 @@ exports.updateTempPassword = async (id, password) => {
     return await User.findByIdAndUpdate({ _id: ObjectId(id) }, { temp_password: password });
 }
 
+exports.updatePassword = async (id, password) => {
+    return await User.findByIdAndUpdate({ _id: ObjectId(id) }, { password });
+}
+
 exports.updateForgotPassword = async (id, value) => {
     return await User.findOneAndUpdate({ _id: ObjectId(id) }, { forgot_password: value });
 }

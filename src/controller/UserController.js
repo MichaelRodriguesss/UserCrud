@@ -99,8 +99,6 @@ module.exports = {
      }
     }
 
-    await UserRepository.updateFirstAccess(user.id);
-
     try {
       const secret = process.env.SECRET;
       const token = jwt.sign(
@@ -234,4 +232,40 @@ module.exports = {
         res.status(400).json({ message: e.message });
     }
   },
+
+  async firstAccess(req, res) {
+    
+    const  id  = req.user;
+    const {password, confirmPassword} = req.body;
+
+    let user = await UserRepository.findById(id);
+
+    let contract = new ValidationContract();
+    contract.isRequired(password, 'O campo senha não pode ser vazio');
+    contract.isRequired(confirmPassword, 'O campo confirmar senha não pode ser vazio');
+
+    if (!contract.isValid()) {
+        res.status(400).send(contract.errors()).end();
+        return;
+    }
+
+    try {
+        if (user.first_access == false && user.forgot_password == false) {
+            throw new Error("Usuário já fez seu primeiro acesso")
+        }
+
+        if (password !== confirmPassword) {
+            throw new Error("As senhas não podem ser diferentes")
+        }
+
+        const passwordHash = await bcrypt.hash(password.toString(), 12);
+        await UserRepository.updatePassword(user.id, passwordHash);
+        await UserRepository.updateFirstAccess(user.id);
+        await UserRepository.updateForgotPassword(user.id, false);
+
+        res.status(200).json({ message: "Senha alterada com sucesso" });
+    } catch (e) {
+        res.status(400).json({ message: e.message });
+    }
+  }
 };
