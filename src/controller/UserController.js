@@ -80,7 +80,7 @@ module.exports = {
       if(user) {
           await passwordService.checkIfPasswordHasExpired(user.id, user.temp_password_expiration)
       } else {
-          const checkPassword = await bcrypt.compare(password.toString() , user.password.toString());
+          const checkPassword = await bcrypt.compare(password.toString(), user.password.toString());
 
           if (!checkPassword) {
           return res.status(422).json({ message: "senha incorreta!" });
@@ -92,7 +92,7 @@ module.exports = {
           user = await UserRepository.findByEmail(email);
       }
     } else {
-      const checkPassword = await bcrypt.compare(password.toString() , user.password.toString());
+      const checkPassword = await bcrypt.compare(password.toString(), user.password.toString());
 
       if (!checkPassword) {
       return res.status(422).json({ message: "senha incorreta!" });
@@ -154,7 +154,7 @@ module.exports = {
         return res.status(422).json({ message: "Usuário não encontrado!" });
       }
 
-      res.status(200).json(dataCreate);
+      res.status(200).json({message: "Usuário atualizado com sucesso!"});
   } catch (error) {
     res.status(500).json({ error: error });
    }

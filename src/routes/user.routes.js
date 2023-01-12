@@ -9,7 +9,7 @@ routes.get('/', (req, res) => {
 });
 
 routes.patch('/user/forgotPassword', UserController.forgotPassword);
-routes.post('/auth/register' ,UserController.register);
+routes.post('/auth/register' ,checkAdmin, UserController.register);
 routes.post("/auth/login", UserController.login);
 routes.get("/users", checkOperator, UserController.listAllUsers);
 routes.get('/user/:id', checkOperator, UserController.infoDetailUser);

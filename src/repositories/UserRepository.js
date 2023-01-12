@@ -3,7 +3,7 @@ const User = require('../model/User');
 
 
 exports.find = async (data) => {
-    const user = await User.find();
+    const user = await User.find().select('-password');
 
     if (!user) {
         throw new Error("Usuário não encontrado");
@@ -14,7 +14,7 @@ exports.find = async (data) => {
 
 exports.findById = async (id) => {
     try {
-        const user = await User.findById(ObjectId(id));
+        const user = await User.findById(ObjectId(id)).select('-password');
 
         if (!user) {
             throw new Error("Usuário não encontrado");
